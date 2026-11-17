@@ -4,7 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, FolderOpen, Code2, Terminal, ScanSearch,
   AlertCircle, Bot, BarChart2, User, LogOut, ShieldCheck,
-  Users, ChevronRight, ChevronLeft, Sparkles, PanelLeftClose, PanelLeftOpen
+  Users, ChevronRight, ChevronLeft, Sparkles, PanelLeftClose, PanelLeftOpen,
+  Moon, Sun, Activity
 } from 'lucide-react';
 
 const navItems = [
@@ -15,6 +16,7 @@ const navItems = [
   { to: '/analysis',   icon: ScanSearch,      label: 'Analysis' },
   { to: '/issues',     icon: AlertCircle,     label: 'Issues' },
   { to: '/ai',         icon: Sparkles,        label: 'AI Assistant' },
+  { to: '/token-usage',icon: Activity,        label: 'Token Usage' },
   { to: '/analytics',  icon: BarChart2,       label: 'Analytics' },
 ];
 
@@ -44,6 +46,23 @@ const Sidebar = ({ isOpen, onClose }) => {
     return saved === 'true';
   });
 
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('codelab-theme') || 'light';
+  });
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('codelab-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
   useEffect(() => {
     document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '72px' : '252px');
     localStorage.setItem('sidebar-collapsed', isCollapsed);
@@ -70,7 +89,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   };
 
   return (
-    <nav className={`sidebar ${isOpen ? 'open' : ''} ${isCollapsed ? 'collapsed' : ''}`} role="navigation" aria-label="Main navigation" style={{ background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+    <nav className={`sidebar ${isOpen ? 'open' : ''} ${isCollapsed ? 'collapsed' : ''}`} role="navigation" aria-label="Main navigation" style={{ background: 'var(--bg-sidebar)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
       {/* Logo */}
       <div className="sidebar-logo" style={{ justifyContent: isCollapsed ? 'center' : 'flex-start', padding: isCollapsed ? '18px 0 16px' : '18px 16px 16px' }}>
         <div className="sidebar-logo-icon" aria-hidden="true" style={{ transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>CL</div>
@@ -190,6 +209,25 @@ const Sidebar = ({ isOpen, onClose }) => {
 
       {/* Footer */}
       <div className="sidebar-footer" style={{ padding: isCollapsed ? '10px 6px' : '10px' }}>
+        <button
+          onClick={toggleTheme}
+          className="btn btn-ghost w-full"
+          style={{
+            marginBottom: '8px',
+            justifyContent: isCollapsed ? 'center' : 'flex-start',
+            gap: '8px',
+            color: 'var(--text-secondary)',
+            fontSize: '0.8rem',
+            padding: isCollapsed ? '10px 0' : '7px 8px',
+            borderRadius: 'var(--radius-sm)',
+          }}
+          aria-label="Toggle Theme"
+          title={isCollapsed ? 'Toggle Theme' : undefined}
+        >
+          {theme === 'dark' ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
+          {!isCollapsed && (theme === 'dark' ? 'Light Mode' : 'Dark Mode')}
+        </button>
+
         <div
           className="user-card"
           style={{ justifyContent: isCollapsed ? 'center' : 'flex-start', padding: isCollapsed ? '8px 0' : '7px 8px' }}

@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   Users, Activity, FolderOpen, Bot, Terminal, ScanSearch,
-  Shield, TrendingUp, UserCheck, Clock, RefreshCw, AlertCircle,
+  Shield, TrendingUp, UserCheck, Clock, RefreshCw, AlertCircle, Database
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import AnimatedNumber from '../components/ui/AnimatedNumber';
@@ -38,7 +38,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: 'white', border: '1px solid var(--border)',
+      background: 'var(--bg-card)', border: '1px solid var(--border)',
       borderRadius: 'var(--radius-sm)', padding: '8px 12px',
       boxShadow: 'var(--shadow-md)', fontSize: '0.8rem',
     }}>
@@ -54,14 +54,19 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const AdminDashboard = () => {
   const [data, setData] = useState(null);
+  const [tokenUsage, setTokenUsage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/admin/stats');
-      setData(res.data);
+      const [statsRes, usageRes] = await Promise.all([
+        api.get('/admin/stats'),
+        api.get('/usage/admin-stats')
+      ]);
+      setData(statsRes.data);
+      setTokenUsage(usageRes.data);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load admin data');
     } finally {
@@ -113,7 +118,7 @@ const AdminDashboard = () => {
     color: ACTIVITY_COLORS[i % ACTIVITY_COLORS.length],
   }));
 
-  const TABS = ['overview', 'users', 'activity'];
+  const TABS = ['overview', 'users', 'activity', 'token-usage'];
 
   return (
     <div className="page-content">
@@ -300,7 +305,7 @@ const AdminDashboard = () => {
                     key={u._id}
                     style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.15s' }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-card)'}
                   >
                     <td style={{ padding: '11px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -387,6 +392,59 @@ const AdminDashboard = () => {
             </div>
           </div>
         </ScrollReveal>
+      )}
+
+      {/* Token Usage Tab */}
+      {activeTab === 'token-usage' && tokenUsage && (
+        <div className="stagger-1">
+          <div className="grid-4" style={{ marginBottom: 24 }}>
+            {[
+              { label: 'Total Tokens', value: tokenUsage.stats.totalTokens, icon: <Database size={18} />, color: 'var(--primary)', bg: 'var(--primary-light)' },
+              { label: 'Estimated Cost', value: `$${(tokenUsage.stats.totalCost || 0).toFixed(2)}`, icon: <Activity size={18} />, color: 'var(--success)', bg: 'var(--success-light)' },
+              { label: 'Total Requests', value: tokenUsage.stats.totalRequests, icon: <Bot size={18} />, color: 'var(--accent)', bg: 'var(--accent-light)' },
+              { label: 'Avg Duration (ms)', value: Math.round(tokenUsage.stats.avgDuration || 0), icon: <Clock size={18} />, color: 'var(--warning)', bg: 'var(--warning-light)' },
+            ].map((s, i) => (
+              <SpotlightCard key={s.label} className="stat-card" style={{ animationDelay: `${i * 80}ms` }}>
+                <div className="stat-card-header">
+                  <div className="stat-icon" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
+                </div>
+                <div className="stat-value">
+                  {typeof s.value === 'string' && s.value.startsWith('$') ? s.value : <AnimatedNumber value={s.value} />}
+                </div>
+                <div className="stat-label">{s.label}</div>
+              </SpotlightCard>
+            ))}
+          </div>
+
+          <ScrollReveal delay={100} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+              <h3 style={{ fontWeight: 600, fontSize: '1rem' }}>Top Users by AI Cost</h3>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+                    {['User', 'Requests', 'Total Tokens', 'Estimated Cost'].map((h) => (
+                      <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tokenUsage.topUsers?.map((u) => (
+                    <tr key={u._id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '11px 16px', fontWeight: 600, fontSize: '0.8rem' }}>{u.name || 'Unknown User'}</td>
+                      <td style={{ padding: '11px 16px', fontSize: '0.8rem' }}>{u.requests}</td>
+                      <td style={{ padding: '11px 16px', fontSize: '0.8rem' }}>{u.tokens}</td>
+                      <td style={{ padding: '11px 16px', fontSize: '0.8rem', color: 'var(--success)' }}>${(u.cost || 0).toFixed(4)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollReveal>
+        </div>
       )}
     </div>
   );

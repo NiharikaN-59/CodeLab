@@ -26,7 +26,7 @@ router.post('/chat', async (req, res) => {
       }
     }
 
-    const result = await chatWithAI(messages, contextStr);
+    const result = await chatWithAI(messages, contextStr, req.user._id);
 
     await require('../models/User').findByIdAndUpdate(req.user._id, {
       $inc: { 'stats.totalAiRequests': 1 },

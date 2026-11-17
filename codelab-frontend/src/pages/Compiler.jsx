@@ -213,7 +213,7 @@ const CompilerPage = () => {
       <div
         className="stagger-1"
         style={{
-          background: 'white',
+          background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius)',
           padding: '12px 16px',
@@ -274,7 +274,7 @@ const CompilerPage = () => {
 
       <div className="stagger-2" style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', minHeight: 0 }}>
         {/* Code Editor */}
-        <div style={{ display: 'flex', flexDirection: 'column', background: 'white', borderRadius: 'var(--radius)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', overflow: 'hidden' }}>
           <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Code2 size={14} style={{ color: 'var(--primary)' }} aria-hidden="true" />
             <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>
@@ -318,7 +318,7 @@ const CompilerPage = () => {
         </div>
 
         {/* Output Panel */}
-        <div style={{ display: 'flex', flexDirection: 'column', background: 'white', borderRadius: 'var(--radius)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', overflow: 'hidden' }}>
           <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Terminal size={14} style={{ color: 'var(--text-secondary)' }} aria-hidden="true" />
             <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Output</span>

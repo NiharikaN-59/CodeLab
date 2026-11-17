@@ -49,8 +49,8 @@ const IssueCard = ({ issue, onRepair, onAccept, onReject, mode }) => {
     enrichFetched.current = true;
 
     // If already stored on the issue from the analysis run, use it directly
-    const hasAi = issue.aiExplanation && !issue.aiExplanation.includes('unavailable') && !issue.aiExplanation.includes('OPENROUTER');
-    const hasHint = issue.hint && !issue.hint.includes('unavailable') && !issue.hint.includes('OPENROUTER');
+    const hasAi = issue.aiExplanation && !issue.aiExplanation.includes('unavailable') && !issue.aiExplanation.includes('OPENROUTER') && !issue.aiExplanation.includes('Failed to parse');
+    const hasHint = issue.hint && !issue.hint.includes('unavailable') && !issue.hint.includes('OPENROUTER') && !issue.hint.includes('Failed to parse');
     if (hasAi || hasHint) {
       setAiData({
         aiExplanation: issue.aiExplanation,
@@ -144,7 +144,7 @@ const IssueCard = ({ issue, onRepair, onAccept, onReject, mode }) => {
               </div>
             )}
 
-            {merged.aiExplanation && !merged.aiExplanation.includes('unavailable') && !merged.aiExplanation.includes('OPENROUTER') && (
+            {merged.aiExplanation && !merged.aiExplanation.includes('unavailable') && !merged.aiExplanation.includes('OPENROUTER') && !merged.aiExplanation.includes('Failed to parse') && (
               <div style={{ background: 'var(--info-light)', borderRadius: 'var(--radius-sm)', padding: '10px', marginBottom: '10px' }}>
                 <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--info)', marginBottom: '4px' }}>🤖 AI ANALYSIS</div>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>{merged.aiExplanation}</p>
@@ -158,7 +158,7 @@ const IssueCard = ({ issue, onRepair, onAccept, onReject, mode }) => {
               </div>
             )}
 
-            {merged.hint && !merged.hint.includes('unavailable') && !merged.hint.includes('OPENROUTER') && (
+            {merged.hint && !merged.hint.includes('unavailable') && !merged.hint.includes('OPENROUTER') && !merged.hint.includes('Failed to parse') && (
               <div style={{ background: 'var(--warning-light)', borderRadius: 'var(--radius-sm)', padding: '10px', marginBottom: '10px' }}>
                 <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--warning)', marginBottom: '4px' }}>💡 HINT</div>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>{merged.hint}</p>
@@ -304,9 +304,13 @@ const Analysis = () => {
   const handleRepair = async (issueId) => {
     try {
       const res = await api.post(`/analysis/issues/${issueId}/repair`);
+      if (!res.data.success) {
+        toast.error(res.data.message || 'Repair generation failed');
+        return null;
+      }
       return res.data;
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Repair generation failed');
+      toast.error(err.response?.data?.message || err.message || 'Repair generation failed');
       return null;
     }
   };
@@ -315,7 +319,8 @@ const Analysis = () => {
     try {
       await api.post(`/analysis/issues/${issueId}/accept-repair`, repairData);
       toast.success('Repair applied successfully!');
-      setIssues((prev) => prev.map((i) => i._id === issueId ? { ...i, status: 'accepted' } : i));
+      // Remove the issue from the list entirely
+      setIssues((prev) => prev.filter((i) => i._id !== issueId));
       if (currentProject?._id) {
         await openProject(currentProject._id);
       }

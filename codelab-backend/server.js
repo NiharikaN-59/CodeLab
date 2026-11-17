@@ -38,6 +38,7 @@ app.use('/api/analysis', require('./src/routes/analysis'));
 app.use('/api/compiler', require('./src/routes/compiler'));
 app.use('/api/ai', require('./src/routes/ai'));
 app.use('/api/admin', require('./src/routes/admin'));
+app.use('/api/usage', require('./src/routes/usage'));
 
 // Global error handler
 app.use((err, req, res, next) => {

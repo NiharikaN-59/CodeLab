@@ -206,7 +206,7 @@ const Login = () => {
     >
       <style>{`
         .glass-float {
-          background: rgba(255, 255, 255, 0.85);
+          background: var(--bg-card);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
           border: 1px solid rgba(226, 232, 240, 0.8);
@@ -220,7 +220,7 @@ const Login = () => {
         }
         .premium-input {
           width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid #E2E8F0;
-          background: #FFFFFF; font-size: 0.95rem; color: #0F172A; transition: all 0.2s ease;
+          background: var(--bg-card); font-size: 0.95rem; color: var(--text-primary); transition: all 0.2s ease;
         }
         .premium-input:focus {
           outline: none; border-color: #6366F1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
@@ -280,7 +280,7 @@ const Login = () => {
           >
             {/* Main Code Panel Surface */}
             <div style={{
-              width: 480, height: 320, background: '#FFFFFF', borderRadius: 16,
+              width: 480, height: 320, background: 'var(--bg-card)', borderRadius: 16,
               border: '1px solid #E2E8F0', boxShadow: '0 20px 60px -15px rgba(0,0,0,0.05)',
               overflow: 'hidden', display: 'flex', flexDirection: 'column'
             }}>
@@ -444,7 +444,7 @@ const Login = () => {
       </div>
 
       {/* ── RIGHT PANEL (LOGIN FORM) ── */}
-      <div className="split-right" style={{ width: '42%', background: '#FFFFFF', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px', borderLeft: '1px solid #E2E8F0', zIndex: 10, position: 'relative' }}>
+      <div className="split-right" style={{ width: '42%', background: 'var(--bg-card)', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px', borderLeft: '1px solid var(--border)', zIndex: 10, position: 'relative' }}>
         <motion.div 
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8, duration: 0.6, ease: "easeOut" }}
           className="form-container" style={{ width: '100%', maxWidth: 360, margin: '0 auto' }}

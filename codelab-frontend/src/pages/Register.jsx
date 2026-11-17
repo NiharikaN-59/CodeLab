@@ -112,7 +112,7 @@ const Register = () => {
               display: 'flex',
               gap: 24,
               padding: '16px 20px',
-              background: 'white',
+              background: 'var(--bg-card)',
               borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--border)',
               boxShadow: 'var(--shadow-sm)',

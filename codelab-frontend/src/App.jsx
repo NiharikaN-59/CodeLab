@@ -15,6 +15,7 @@ import Issues from './pages/Issues';
 import AIAssistant from './pages/AIAssistant';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
+import TokenUsage from './pages/TokenUsage';
 import AdminDashboard from './pages/AdminDashboard';
 
 // Layout
@@ -36,11 +37,11 @@ const App = () => {
           toastOptions={{
             duration: 3500,
             style: {
-              background: '#fff',
-              color: '#0F172A',
-              border: '1px solid #E2E8F0',
+              background: 'var(--bg-card)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border)',
               borderRadius: '10px',
-              boxShadow: '0 10px 25px -5px rgba(0,0,0,0.08)',
+              boxShadow: 'var(--shadow-md)',
               fontSize: '0.875rem',
               fontFamily: 'Inter, sans-serif',
             },
@@ -68,6 +69,7 @@ const App = () => {
             <Route path="/issues" element={<Issues />} />
             <Route path="/ai" element={<AIAssistant />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/token-usage" element={<TokenUsage />} />
             <Route path="/profile" element={<Profile />} />
 
             {/* Admin only */}

@@ -216,7 +216,7 @@ const AIAssistant = () => {
       {/* Chat Container */}
       <div className="stagger-2" style={{
         flex: 1,
-        background: 'white',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border)',
         borderRadius: 'var(--radius-lg)',
         display: 'flex',

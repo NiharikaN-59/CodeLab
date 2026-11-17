@@ -23,8 +23,14 @@ router.post('/:projectId/run', async (req, res) => {
     const existingIssues = await Issue.find({ project: project._id }).lean();
     const existingAiCache = {};
     for (const ei of existingIssues) {
-      if (ei.aiExplanation && !ei.aiExplanation.includes('unavailable')) {
-        existingAiCache[`${ei.file}:${ei.line}:${ei.rule}`] = ei;
+      const isValid = ei.aiExplanation && !ei.aiExplanation.includes('unavailable') && !ei.aiExplanation.includes('Failed to parse');
+      if (isValid) {
+        // Only reuse cache if it matches the requested mode's fields
+        if (mode === 'hint' && ei.hint) {
+          existingAiCache[`${ei.file}:${ei.line}:${ei.rule}`] = ei;
+        } else if (mode === 'full' && ei.suggestedFix) {
+          existingAiCache[`${ei.file}:${ei.line}:${ei.rule}`] = ei;
+        }
       }
     }
 
@@ -55,12 +61,12 @@ router.post('/:projectId/run', async (req, res) => {
       }
     }
 
-    // Only call AI for files with un-cached issues
-    for (const [filePath, fileIssues] of topFiles) {
+    // Only call AI for files with un-cached issues (Concurrent)
+    const aiPromises = topFiles.map(async ([filePath, fileIssues]) => {
       const uncachedIssues = fileIssues.filter(
         (i) => !aiEnrichedMap[`${i.file}:${i.line}:${i.rule}`]
       );
-      if (uncachedIssues.length === 0) continue;
+      if (uncachedIssues.length === 0) return;
 
       const fileObj = project.files.find((f) => f.path === filePath);
       if (fileObj) {
@@ -70,7 +76,8 @@ router.post('/:projectId/run', async (req, res) => {
             fileObj.content,
             fileObj.name,
             fileObj.language,
-            mode
+            mode,
+            req.user._id
           );
           for (const ei of enriched) {
             aiEnrichedMap[`${ei.file}:${ei.line}:${ei.rule}`] = ei;
@@ -79,7 +86,9 @@ router.post('/:projectId/run', async (req, res) => {
           console.error('AI enrichment error:', e.message);
         }
       }
-    }
+    });
+
+    await Promise.all(aiPromises);
 
     // Step 4: Merge AI data into issues and save
     const issueDocs = [];
@@ -106,27 +115,15 @@ router.post('/:projectId/run', async (req, res) => {
 
     const savedIssues = await Issue.insertMany(issueDocs);
 
-    // Step 5: Update project analysis stats
-    project.currentAnalysis = {
-      totalIssues: summary.total,
-      critical: summary.critical,
-      high: summary.high,
-      medium: summary.medium,
-      low: summary.low,
-      securityIssues: summary.security,
-      qualityScore,
-    };
-    project.lastAnalyzed = new Date();
+    // Step 5: Update project analysis stats atomically (avoids VersionError)
+    const updatedFilePriorities = project.files.map((file) => ({
+      ...file.toObject(),
+      priority: filePriorities[file.path] || 'none',
+      issueCount: (fileGroups[file.path] || []).length,
+      lastAnalyzed: new Date(),
+    }));
 
-    // Update file priorities
-    for (const file of project.files) {
-      file.priority = filePriorities[file.path] || 'none';
-      file.issueCount = (fileGroups[file.path] || []).length;
-      file.lastAnalyzed = new Date();
-    }
-
-    // Add to history (keep last 30)
-    project.analysisHistory.push({
+    const historyEntry = {
       timestamp: new Date(),
       totalIssues: summary.total,
       critical: summary.critical,
@@ -134,12 +131,33 @@ router.post('/:projectId/run', async (req, res) => {
       medium: summary.medium,
       low: summary.low,
       score: qualityScore,
-    });
-    if (project.analysisHistory.length > 30) {
-      project.analysisHistory = project.analysisHistory.slice(-30);
-    }
+    };
 
-    await project.save();
+    const updatedProject = await Project.findByIdAndUpdate(
+      project._id,
+      {
+        $set: {
+          currentAnalysis: {
+            totalIssues: summary.total,
+            critical: summary.critical,
+            high: summary.high,
+            medium: summary.medium,
+            low: summary.low,
+            securityIssues: summary.security,
+            qualityScore,
+          },
+          lastAnalyzed: new Date(),
+          files: updatedFilePriorities,
+        },
+        $push: {
+          analysisHistory: {
+            $each: [historyEntry],
+            $slice: -30,
+          },
+        },
+      },
+      { new: true }
+    );
 
     // Update user stats
     await require('../models/User').findByIdAndUpdate(req.user._id, {
@@ -160,15 +178,78 @@ router.post('/:projectId/run', async (req, res) => {
         filePriorities,
         issues: savedIssues,
         project: {
-          _id: project._id,
-          name: project.name,
-          currentAnalysis: project.currentAnalysis,
-          lastAnalyzed: project.lastAnalyzed,
+          _id: updatedProject._id,
+          name: updatedProject.name,
+          currentAnalysis: updatedProject.currentAnalysis,
+          lastAnalyzed: updatedProject.lastAnalyzed,
         },
       },
     });
   } catch (err) {
     console.error('Analysis error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/analysis/issues/:issueId/enrich - Get AI enrichment (cached or fresh)
+// NOTE: This MUST be defined before /:projectId/issues to avoid Express
+// matching 'issues' as a projectId in the wildcard route.
+router.get('/issues/:issueId/enrich', async (req, res) => {
+  try {
+    const issue = await Issue.findById(req.params.issueId).populate('project');
+    if (!issue) return res.status(404).json({ success: false, message: 'Issue not found' });
+    if (issue.project.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Return cached AI data if already enriched
+    const alreadyCached =
+      issue.aiExplanation && !issue.aiExplanation.includes('unavailable') && !issue.aiExplanation.includes('OPENROUTER') && !issue.aiExplanation.includes('Failed to parse');
+    if (alreadyCached) {
+      return res.json({
+        success: true,
+        cached: true,
+        aiExplanation: issue.aiExplanation,
+        aiSeverityReason: issue.aiSeverityReason,
+        potentialImpact: issue.potentialImpact,
+        suggestedFix: issue.suggestedFix,
+        improvedCode: issue.improvedCode,
+        repairRecommendation: issue.repairRecommendation,
+        hint: issue.hint,
+        possibleApproach: issue.possibleApproach,
+        relevantConcepts: issue.relevantConcepts,
+      });
+    }
+
+    // Not cached — call AI now
+    const project = await Project.findById(issue.project._id);
+    const fileObj = project?.files.find((f) => f.path === issue.file);
+    const enriched = await analyzeIssuesWithAI(
+      [issue.toObject()],
+      fileObj?.content,
+      fileObj?.name || issue.file,
+      fileObj?.language || 'unknown',
+      req.query.mode || 'full',
+      req.user._id
+    );
+    const aiData = enriched[0] || {};
+
+    // Persist to DB so next call is cached
+    const fieldsToSave = {};
+    const aiFields = ['aiExplanation','aiSeverityReason','potentialImpact','suggestedFix','improvedCode','repairRecommendation','hint','possibleApproach','relevantConcepts'];
+    for (const f of aiFields) {
+      if (aiData[f] != null) fieldsToSave[f] = aiData[f];
+    }
+    if (Object.keys(fieldsToSave).length > 0) {
+      await Issue.findByIdAndUpdate(issue._id, { $set: fieldsToSave });
+    }
+
+    await require('../models/User').findByIdAndUpdate(req.user._id, {
+      $inc: { 'stats.totalAiRequests': 1 },
+    });
+
+    res.json({ success: true, cached: false, ...fieldsToSave });
+  } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -195,66 +276,6 @@ router.get('/:projectId/issues', async (req, res) => {
   }
 });
 
-// GET /api/analysis/issues/:issueId/enrich - Get AI enrichment (cached or fresh)
-router.get('/issues/:issueId/enrich', async (req, res) => {
-  try {
-    const issue = await Issue.findById(req.params.issueId).populate('project');
-    if (!issue) return res.status(404).json({ success: false, message: 'Issue not found' });
-    if (issue.project.owner.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
-    }
-
-    // Return cached AI data if already enriched
-    const alreadyCached =
-      issue.aiExplanation && !issue.aiExplanation.includes('unavailable') && !issue.aiExplanation.includes('OPENROUTER');
-    if (alreadyCached) {
-      return res.json({
-        success: true,
-        cached: true,
-        aiExplanation: issue.aiExplanation,
-        aiSeverityReason: issue.aiSeverityReason,
-        potentialImpact: issue.potentialImpact,
-        suggestedFix: issue.suggestedFix,
-        improvedCode: issue.improvedCode,
-        repairRecommendation: issue.repairRecommendation,
-        hint: issue.hint,
-        possibleApproach: issue.possibleApproach,
-        relevantConcepts: issue.relevantConcepts,
-      });
-    }
-
-    // Not cached — call AI now
-    const project = await Project.findById(issue.project._id);
-    const fileObj = project?.files.find((f) => f.path === issue.file);
-    const enriched = await analyzeIssuesWithAI(
-      [issue.toObject()],
-      fileObj?.content,
-      fileObj?.name || issue.file,
-      fileObj?.language || 'unknown',
-      req.query.mode || 'full'
-    );
-    const aiData = enriched[0] || {};
-
-    // Persist to DB so next call is cached
-    const fieldsToSave = {};
-    const aiFields = ['aiExplanation','aiSeverityReason','potentialImpact','suggestedFix','improvedCode','repairRecommendation','hint','possibleApproach','relevantConcepts'];
-    for (const f of aiFields) {
-      if (aiData[f] != null) fieldsToSave[f] = aiData[f];
-    }
-    if (Object.keys(fieldsToSave).length > 0) {
-      await Issue.findByIdAndUpdate(issue._id, { $set: fieldsToSave });
-    }
-
-    await require('../models/User').findByIdAndUpdate(req.user._id, {
-      $inc: { 'stats.totalAiRequests': 1 },
-    });
-
-    res.json({ success: true, cached: false, ...fieldsToSave });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
 // POST /api/analysis/issues/:issueId/repair - Generate AI repair
 router.post('/issues/:issueId/repair', async (req, res) => {
   try {
@@ -270,7 +291,7 @@ router.post('/issues/:issueId/repair', async (req, res) => {
     const fileObj = project.files.find((f) => f.path === issue.file);
 
     const { generateRepair } = require('../services/openaiService');
-    const result = await generateRepair(issue, fileObj?.content, fileObj?.language);
+    const result = await generateRepair(issue, fileObj?.content, fileObj?.language, req.user._id);
 
     await require('../models/User').findByIdAndUpdate(req.user._id, {
       $inc: { 'stats.totalAiRequests': 1 },
@@ -299,9 +320,32 @@ router.post('/issues/:issueId/accept-repair', async (req, res) => {
 
     const fileIdx = project.files.findIndex((f) => f.path === issue.file);
     if (fileIdx >= 0 && repairedCode && originalCode) {
-      project.files[fileIdx].content = project.files[fileIdx].content.replace(originalCode, repairedCode);
-      project.lastSaved = new Date();
-      await project.save();
+      // Fuzzy replace to handle AI whitespace/indentation discrepancies
+      const escapedSearch = originalCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regexPattern = escapedSearch.replace(/\s+/g, '\\s+');
+      const regex = new RegExp(regexPattern);
+      
+      const newContent = project.files[fileIdx].content.replace(regex, repairedCode);
+      
+      let wasModified = false;
+      if (newContent !== project.files[fileIdx].content) {
+        project.files[fileIdx].content = newContent;
+        wasModified = true;
+      } else {
+        // Fallback: try direct replace if regex fails (e.g. edge cases)
+        const fallbackContent = project.files[fileIdx].content.replace(originalCode, repairedCode);
+        if (fallbackContent !== project.files[fileIdx].content) {
+          project.files[fileIdx].content = fallbackContent;
+          wasModified = true;
+        }
+      }
+
+      if (wasModified) {
+        project.lastSaved = new Date();
+        await project.save();
+      } else {
+        return res.status(400).json({ success: false, message: 'Could not apply repair: Original code block not found in file. The file may have been modified.' });
+      }
     }
 
     issue.status = 'accepted';

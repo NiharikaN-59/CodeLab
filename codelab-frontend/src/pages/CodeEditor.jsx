@@ -315,7 +315,7 @@ const CodeEditor = () => {
             </button>
             
             {showAddMenu && (
-              <div style={{ position: 'absolute', top: '100%', right: 0, background: 'white', border: '1px solid var(--border)', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, width: '140px', py: '4px' }}>
+              <div style={{ position: 'absolute', top: '100%', right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, width: '140px', py: '4px' }}>
                 <button className="dropdown-item" onClick={() => { setShowNewFile(true); setShowAddMenu(false); }} style={{ width: '100%', textAlign: 'left', padding: '6px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <File size={12} /> New File
                 </button>
@@ -427,7 +427,7 @@ const CodeEditor = () => {
         <div
           style={{
             height: '44px',
-            background: 'white',
+            background: 'var(--bg-card)',
             borderBottom: '1px solid var(--border)',
             display: 'flex',
             alignItems: 'center',
@@ -496,7 +496,7 @@ const CodeEditor = () => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              background: '#FAFBFC',
+              background: 'var(--bg-secondary)',
               color: 'var(--text-muted)',
             }}
           >

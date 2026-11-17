@@ -104,6 +104,36 @@
   --transition-slow:all 0.35s var(--ease-out);
 }
 
+.dark {
+  /* === Background === */
+  --page-bg:        #0F1117;
+  --bg:             #0F1117;
+  --bg-secondary:   #1A1C23;
+  --bg-card:        #1A1C23;
+  --bg-sidebar:     rgba(26, 28, 35, 0.92);
+  --bg-hover:       #2A2E3B;
+
+  /* === Text === */
+  --text-primary:   #F9FAFB;
+  --text-secondary: #D1D5DB;
+  --text-tertiary:  #9CA3AF;
+  --text-muted:     #6B7280;
+  --text-inverse:   #111827;
+
+  /* === Borders === */
+  --border:         #374151;
+  --border-strong:  #4B5563;
+  --border-focus:   var(--primary-hover);
+
+  /* === Primary Palette Adjustments === */
+  --primary-light:  rgba(91, 92, 226, 0.15);
+  --accent-light:   rgba(108, 99, 255, 0.15);
+  --success-light:  rgba(18, 183, 106, 0.15);
+  --warning-light:  rgba(247, 144, 9, 0.15);
+  --error-light:    rgba(240, 68, 56, 0.15);
+  --info-light:     rgba(46, 144, 250, 0.15);
+}
+
 /* ===== Reset & Base ===== */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -279,7 +309,6 @@ code, pre {
   display: flex;
   flex-direction: column;
   z-index: 200;
-  overflow: hidden;
   transition: transform 0.3s var(--ease-out);
 }
 
@@ -628,7 +657,7 @@ code, pre {
 
 /* ===== Cards ===== */
 .card {
-  background: rgba(255,255,255,0.88);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 24px;
@@ -1554,7 +1583,7 @@ textarea.form-input { resize: vertical; min-height: 80px; }
   color: var(--text-primary);
 }
 
-.chat-input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(79,70,229,0.08); }
+.chat-input:focus { border-color: var(--primary); background: var(--bg-card); box-shadow: 0 0 0 3px rgba(91,92,226,0.15); }
 
 /* ===== Page-level animations ===== */
 @keyframes fadeIn {
