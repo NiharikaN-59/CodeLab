@@ -62,7 +62,6 @@ router.post('/register', async (req, res) => {
 });
 
 const { OAuth2Client } = require('google-auth-library');
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // POST /api/auth/google
 router.post('/google', async (req, res) => {
@@ -72,10 +71,16 @@ router.post('/google', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Google credential is required' });
     }
 
-    // Verify the Google token
-    const ticket = await googleClient.verifyIdToken({
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      return res.status(500).json({ success: false, message: 'Google OAuth Client ID is not configured on the server' });
+    }
+
+    // Verify the Google token dynamically with the current configured Client ID
+    const client = new OAuth2Client(clientId);
+    const ticket = await client.verifyIdToken({
       idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: clientId,
     });
     const payload = ticket.getPayload();
     const { email, name, sub: googleId, picture } = payload;
@@ -135,8 +140,12 @@ router.post('/google', async (req, res) => {
       user: user.toSafeObject(),
     });
   } catch (err) {
-    console.error('Google Auth Error:', err);
-    res.status(401).json({ success: false, message: 'Google authentication failed' });
+    console.error('Google Auth Error:', err.message);
+    res.status(401).json({
+      success: false,
+      message: 'Google authentication failed',
+      detail: process.env.NODE_ENV === 'production' ? undefined : err.message,
+    });
   }
 });
 

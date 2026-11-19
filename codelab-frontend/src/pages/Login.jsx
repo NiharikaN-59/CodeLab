@@ -290,7 +290,10 @@ const Login = () => {
 
   const handleGoogleError = () => toast.error('Google login was unsuccessful.');
 
-  const fillDemo = () => setForm({ email: 'admin@codelab.dev', password: 'password123' });
+  const fillDemo = () => {
+    setForm({ email: 'demo@codelab.dev', password: 'Demo@12345' });
+    toast.success('Demo credentials loaded (Demo User)', { id: 'demo-loaded', icon: '👤', duration: 2500 });
+  };
 
   // Running counter to accurately slice tokens during character typing
   let runningCharCounter = 0;
@@ -456,24 +459,15 @@ const Login = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              fontSize: '0.75rem', fontWeight: 600, color: '#6366F1',
-              letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12,
-              background: 'rgba(99, 102, 241, 0.08)', padding: '4px 12px',
-              borderRadius: 'var(--radius-full)'
-            }}>
-              <Sparkles size={12} /> Autonomous 3D Code Intelligence
-            </div>
             <h1 style={{
               fontSize: '2.75rem', fontWeight: 700, color: 'var(--text-primary)',
-              lineHeight: 1.15, letterSpacing: '-1px', margin: '0 0 12px 0'
+              lineHeight: 1.2, letterSpacing: '-1px', margin: '0 0 14px 0'
             }}>
-              Understand your code.<br/>
-              Fix issues autonomously.
+              Every issue has a story.<br/>
+              Find it. Fix it.
             </h1>
-            <p style={{ color: 'var(--text-tertiary)', fontSize: '0.95rem', margin: 0, maxWidth: 460, lineHeight: 1.6 }}>
-              Deep AST semantic inspection, vulnerability detection, and instantaneous AI-driven code repair.
+            <p style={{ color: 'var(--text-tertiary)', fontSize: '0.95rem', margin: 0, maxWidth: 490, lineHeight: 1.6 }}>
+              Understand what's wrong, why it matters, and how to improve your code with intelligent analysis and AI assistance.
             </p>
           </motion.div>
         </div>
@@ -1176,6 +1170,7 @@ const Login = () => {
           </form>
 
           <motion.button
+            type="button"
             onClick={fillDemo}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}

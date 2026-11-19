@@ -12,14 +12,23 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle token expiry globally
+// Handle token expiry globally on protected requests
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const requestUrl = error.config?.url || '';
+    const isAuthEndpoint = requestUrl.includes('/auth/login') ||
+                           requestUrl.includes('/auth/google') ||
+                           requestUrl.includes('/auth/register');
+
+    // Only redirect to /login if a protected route returns 401 (expired session),
+    // and do not reload if already on the login page or attempting auth.
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('cl_token');
       localStorage.removeItem('cl_user');
-      window.location.href = '/login';
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
