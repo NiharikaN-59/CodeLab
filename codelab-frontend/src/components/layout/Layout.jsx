@@ -76,7 +76,9 @@ const Layout = () => {
           onClose={() => setSidebarOpen(false)}
         />
         <main className="main-content">
-          <Outlet />
+          <div key={location.pathname} className="page-transition fadeIn">
+            <Outlet />
+          </div>
         </main>
       </div>
     </ProjectProvider>

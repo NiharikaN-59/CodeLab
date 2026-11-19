@@ -3,6 +3,7 @@ const Project = require('../models/Project');
 const Issue = require('../models/Issue');
 const { authenticate } = require('../middleware/auth');
 const { analyzeProject } = require('../services/staticAnalyzer');
+const { runEndToEndAnalysis } = require('../services/e2eAnalyzer');
 const { analyzeIssuesWithAI, generateRepair } = require('../services/openaiService');
 const { logActivity } = require('../utils/activityLogger');
 
@@ -16,14 +17,19 @@ router.post('/:projectId/run', async (req, res) => {
     const project = await Project.findOne({ _id: req.params.projectId, owner: req.user._id });
     if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
 
-    // Step 1: Static analysis
-    const { issues: staticIssues, summary, filePriorities, qualityScore } = analyzeProject(project.files);
+    // Step 1: Run End-to-End Application Analysis & Testing Engine
+    const { issues: staticIssues, summary, filePriorities, qualityScore, scoreBreakdown, auditSummary, topology } = runEndToEndAnalysis(project.files, project);
 
     // Step 2: Load existing issues to reuse cached AI enrichment
     const existingIssues = await Issue.find({ project: project._id }).lean();
     const existingAiCache = {};
     for (const ei of existingIssues) {
-      const isValid = ei.aiExplanation && !ei.aiExplanation.includes('unavailable') && !ei.aiExplanation.includes('Failed to parse');
+      const isValid =
+        ei.aiExplanation &&
+        !ei.aiExplanation.includes('unavailable') &&
+        !ei.aiExplanation.includes('Failed to parse') &&
+        !ei.aiExplanation.includes('Clear explanation of the issue') &&
+        !ei.aiExplanation.includes('unrecognized format');
       if (isValid) {
         // Only reuse cache if it matches the requested mode's fields
         if (mode === 'hint' && ei.hint) {
@@ -104,8 +110,13 @@ router.post('/:projectId/run', async (req, res) => {
         title: issue.title,
         description: issue.description,
         line: issue.line,
+        column: issue.column,
         codeSnippet: issue.codeSnippet,
-        source: aiData.aiExplanation ? 'combined' : 'static',
+        source: issue.source || (aiData.aiExplanation ? 'combined' : 'Static Analysis'),
+        category: issue.category || 'Code Quality',
+        component: issue.component || null,
+        reproductionSteps: issue.reproductionSteps || null,
+        evidence: issue.evidence || null,
         rule: issue.rule,
         priorityScore: issue.priorityScore,
         ...aiData,
@@ -145,6 +156,7 @@ router.post('/:projectId/run', async (req, res) => {
             low: summary.low,
             securityIssues: summary.security,
             qualityScore,
+            auditSummary,
           },
           lastAnalyzed: new Date(),
           files: updatedFilePriorities,
@@ -156,7 +168,7 @@ router.post('/:projectId/run', async (req, res) => {
           },
         },
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     // Update user stats
@@ -164,19 +176,26 @@ router.post('/:projectId/run', async (req, res) => {
       $inc: { 'stats.totalAnalyses': 1, 'stats.totalAiRequests': 1 },
     });
 
-    await logActivity(req.user._id, req.user.name, 'analyze', `Ran analysis on "${project.name}"`, {
+    await logActivity(req.user._id, req.user.name, 'analyze', `Ran end-to-end analysis on "${project.name}"`, {
       project: project._id,
       projectName: project.name,
-      metadata: { totalIssues: summary.total, qualityScore },
+      metadata: { totalIssues: summary.total, qualityScore, auditSummary },
     });
 
     res.json({
       success: true,
       analysis: {
-        summary,
+        summary: {
+          ...summary,
+          totalIssues: summary.total,
+          securityIssues: summary.security,
+        },
         qualityScore,
+        scoreBreakdown,
         filePriorities,
         issues: savedIssues,
+        auditSummary,
+        topology,
         project: {
           _id: updatedProject._id,
           name: updatedProject.name,
@@ -186,8 +205,18 @@ router.post('/:projectId/run', async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('Analysis error:', err);
-    res.status(500).json({ success: false, message: err.message });
+    console.error('Analysis error:', err.stack || err);
+    let userMessage = 'Analysis pipeline encountered an error';
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
+      userMessage = 'Failed to persist audit results to database due to a schema validation error.';
+    } else if (err.message) {
+      userMessage = err.message.length > 150 ? err.message.slice(0, 150) + '...' : err.message;
+    }
+    res.status(500).json({
+      success: false,
+      message: userMessage,
+      technicalDetails: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    });
   }
 });
 
@@ -204,7 +233,12 @@ router.get('/issues/:issueId/enrich', async (req, res) => {
 
     // Return cached AI data if already enriched
     const alreadyCached =
-      issue.aiExplanation && !issue.aiExplanation.includes('unavailable') && !issue.aiExplanation.includes('OPENROUTER') && !issue.aiExplanation.includes('Failed to parse');
+      issue.aiExplanation &&
+      !issue.aiExplanation.includes('unavailable') &&
+      !issue.aiExplanation.includes('OPENROUTER') &&
+      !issue.aiExplanation.includes('Failed to parse') &&
+      !issue.aiExplanation.includes('Clear explanation of the issue') &&
+      !issue.aiExplanation.includes('unrecognized format');
     if (alreadyCached) {
       return res.json({
         success: true,
@@ -257,7 +291,7 @@ router.get('/issues/:issueId/enrich', async (req, res) => {
 // GET /api/analysis/:projectId/issues - Get all issues for a project
 router.get('/:projectId/issues', async (req, res) => {
   try {
-    const { priority, type, status, file } = req.query;
+    const { priority, type, status, file, source, category } = req.query;
 
     // Verify project ownership
     const project = await Project.findOne({ _id: req.params.projectId, owner: req.user._id });
@@ -268,9 +302,67 @@ router.get('/:projectId/issues', async (req, res) => {
     if (type) filter.type = type;
     if (status) filter.status = status;
     if (file) filter.file = file;
+    if (source) filter.source = source;
+    if (category) filter.category = category;
 
     const issues = await Issue.find(filter).sort({ priorityScore: -1, priority: 1 });
-    res.json({ success: true, issues });
+
+    // Retrieve all active project issues to calculate authoritative score & summary
+    const allProjectIssues = await Issue.find({ project: req.params.projectId });
+    
+    let qualityScore = 100;
+    let currentAnalysis = project.currentAnalysis ? { ...project.currentAnalysis.toObject() } : {};
+
+    if (allProjectIssues.length > 0) {
+      const activeUnresolved = allProjectIssues.filter(i => i.status !== 'rejected' && i.status !== 'resolved');
+      const critical = activeUnresolved.filter(i => i.priority === 'critical').length;
+      const high = activeUnresolved.filter(i => i.priority === 'high').length;
+      const medium = activeUnresolved.filter(i => i.priority === 'medium').length;
+      const low = activeUnresolved.filter(i => i.priority === 'low').length;
+      const securityIssues = activeUnresolved.filter(i => i.type === 'security').length;
+
+      const { calculateQualityScore } = require('../services/e2eAnalyzer');
+      qualityScore = calculateQualityScore({ critical, high, medium, low });
+
+      currentAnalysis = {
+        ...currentAnalysis,
+        totalIssues: allProjectIssues.length,
+        total: allProjectIssues.length,
+        critical,
+        high,
+        medium,
+        low,
+        securityIssues,
+        security: securityIssues,
+        qualityScore,
+        auditSummary: project.currentAnalysis?.auditSummary || null,
+      };
+
+      // Keep project document synchronized if score or counts in DB were stale
+      if (project.currentAnalysis?.qualityScore !== qualityScore || project.currentAnalysis?.totalIssues !== allProjectIssues.length) {
+        await Project.findByIdAndUpdate(project._id, {
+          $set: {
+            'currentAnalysis.totalIssues': allProjectIssues.length,
+            'currentAnalysis.critical': critical,
+            'currentAnalysis.high': high,
+            'currentAnalysis.medium': medium,
+            'currentAnalysis.low': low,
+            'currentAnalysis.securityIssues': securityIssues,
+            'currentAnalysis.qualityScore': qualityScore,
+          }
+        });
+      }
+    } else if (project.currentAnalysis?.qualityScore != null) {
+      qualityScore = project.currentAnalysis.qualityScore;
+    }
+
+    res.json({
+      success: true,
+      issues,
+      auditSummary: project.currentAnalysis?.auditSummary || null,
+      currentAnalysis,
+      qualityScore,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

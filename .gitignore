@@ -67,3 +67,6 @@ coverage/
 *.tar.gz
 .cache/
 .parcel-cache/
+
+
+KAGGLE_OLLAMA_SETUP.md

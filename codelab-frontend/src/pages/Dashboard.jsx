@@ -29,7 +29,7 @@ const QualityRing = ({ score }) => {
   const label = score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Poor';
   const data = [
     { name: 'Score', value: score, fill: color },
-    { name: 'Rest', value: 100 - score, fill: '#F1F5F9' },
+    { name: 'Rest', value: 100 - score, fill: 'var(--border)' },
   ];
 
   return (
@@ -43,7 +43,7 @@ const QualityRing = ({ score }) => {
           data={data}
           startAngle={90} endAngle={-270}
         >
-          <RadialBar dataKey="value" cornerRadius={6} background={{ fill: '#F1F5F9' }} />
+          <RadialBar dataKey="value" cornerRadius={6} background={{ fill: 'var(--border)' }} animationDuration={1000} animationEasing="ease-out" />
         </RadialBarChart>
         <div style={{
           position: 'absolute', inset: 0,
@@ -121,7 +121,7 @@ const Dashboard = () => {
   const highIssues     = projects.reduce((s, p) => s + (p.currentAnalysis?.high || 0), 0);
   const securityIssues = projects.reduce((s, p) => s + (p.currentAnalysis?.securityIssues || 0), 0);
   const avgScore = projects.length
-    ? Math.round(projects.reduce((s, p) => s + (p.currentAnalysis?.qualityScore || 100), 0) / projects.length)
+    ? Math.round(projects.reduce((s, p) => s + (p.currentAnalysis?.qualityScore ?? 100), 0) / projects.length)
     : 100;
 
   const priorityData = [

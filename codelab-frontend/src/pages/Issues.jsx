@@ -29,7 +29,7 @@ const IssueRow = ({ issue, onClick }) => {
       tabIndex={0}
       aria-label={`View issue: ${issue.title}`}
       onKeyDown={(e) => e.key === 'Enter' && onClick?.()}
-      style={{ cursor: 'pointer', marginBottom: 6, animation: 'fadeUp 0.25s var(--ease) both' }}
+      style={{ cursor: 'pointer', marginBottom: 6, animation: 'fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both' }}
     >
       <div className="issue-card-header">
         <div style={{
@@ -43,11 +43,21 @@ const IssueRow = ({ issue, onClick }) => {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="issue-title" style={{ marginBottom: 5 }}>{issue.title}</div>
-          <div className="issue-meta">
+          <div className="issue-meta" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
             <span className={`badge badge-${issue.priority}`}>{issue.priority}</span>
             <span className={`badge badge-${issue.type || 'neutral'}`} style={{ textTransform: 'capitalize' }}>
               {issue.type?.replace(/_/g, ' ')}
             </span>
+            {issue.source && (
+              <span className="badge badge-purple" style={{ fontSize: '0.68rem', fontWeight: 600 }}>
+                {issue.source}
+              </span>
+            )}
+            {issue.component && (
+              <span className="badge badge-neutral" style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
+                {issue.component}
+              </span>
+            )}
             <span className="issue-file">
               <Code2 size={9} aria-hidden="true" />
               {issue.file}{issue.line ? `:${issue.line}` : ''}
@@ -77,12 +87,13 @@ const Issues = () => {
   const [loading, setLoading] = useState(false);
   const [filterPriority, setFilterPriority] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [filterSource, setFilterSource] = useState('');
   const [filterStatus, setFilterStatus] = useState('open');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (currentProject?._id) loadIssues();
-  }, [currentProject?._id, filterPriority, filterType, filterStatus]);
+  }, [currentProject?._id, filterPriority, filterType, filterSource, filterStatus]);
 
   const loadIssues = async () => {
     if (!currentProject) return;
@@ -91,9 +102,10 @@ const Issues = () => {
       const params = new URLSearchParams();
       if (filterPriority) params.append('priority', filterPriority);
       if (filterType) params.append('type', filterType);
+      if (filterSource) params.append('source', filterSource);
       if (filterStatus) params.append('status', filterStatus);
       const res = await api.get(`/analysis/${currentProject._id}/issues?${params}`);
-      setIssues(res.data.issues);
+      setIssues(res.data.issues || []);
     } catch {} finally {
       setLoading(false);
     }
@@ -240,10 +252,27 @@ const Issues = () => {
           <option value="maintainability">Maintainability</option>
         </select>
 
-        {(filterPriority || filterType || filterStatus !== 'open') && (
+        <select
+          className="form-input"
+          value={filterSource}
+          onChange={(e) => setFilterSource(e.target.value)}
+          style={{ maxWidth: 165 }}
+          aria-label="Filter by source"
+        >
+          <option value="">All Sources</option>
+          <option value="API Contract">API Contract</option>
+          <option value="Security Scan">Security Scan</option>
+          <option value="Database Test">Database Test</option>
+          <option value="Dependency Scan">Dependency Scan</option>
+          <option value="Static Analysis">Static Analysis</option>
+          <option value="Build Test">Build Test</option>
+          <option value="Frontend Analysis">Frontend Analysis</option>
+        </select>
+
+        {(filterPriority || filterType || filterSource || filterStatus !== 'open') && (
           <button
             className="btn btn-ghost btn-sm"
-            onClick={() => { setFilterPriority(''); setFilterType(''); setFilterStatus('open'); setSearch(''); }}
+            onClick={() => { setFilterPriority(''); setFilterType(''); setFilterSource(''); setFilterStatus('open'); setSearch(''); }}
             aria-label="Clear all filters"
           >
             <X size={13} aria-hidden="true" /> Clear filters

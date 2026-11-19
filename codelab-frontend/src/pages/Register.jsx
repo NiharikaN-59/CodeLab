@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { GoogleLogin } from '@react-oauth/google';
 import { Eye, EyeOff, ShieldCheck, Zap, BarChart3, Code2, GitBranch } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const FEATURES = [
   { icon: Code2,       text: 'AI-powered code analysis engine' },
@@ -80,33 +81,58 @@ const Register = () => {
       {/* ── Left Visual Panel ── */}
       <div className="auth-left">
         <div className="auth-left-inner">
-          <div className="auth-brand">
+          <motion.div 
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="auth-brand"
+          >
             <div className="auth-brand-icon" aria-hidden="true">CL</div>
             <span className="auth-brand-name">CodeLab</span>
-          </div>
+          </motion.div>
 
-          <h1 className="auth-headline">
+          <motion.h1 
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="auth-headline"
+          >
             Your AI code<br />
             <span>intelligence hub</span>
-          </h1>
-          <p className="auth-subheadline">
+          </motion.h1>
+
+          <motion.p 
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="auth-subheadline"
+          >
             Join thousands of developers who use CodeLab to
             analyze, prioritize, and automatically repair code issues.
-          </p>
+          </motion.p>
 
           <ul className="auth-feature-list" role="list">
             {FEATURES.map(({ icon: Icon, text }, i) => (
-              <li key={i} className="auth-feature-item">
+              <motion.li 
+                key={i} 
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.35 + i * 0.08, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="auth-feature-item"
+              >
                 <div className="auth-feature-check" aria-hidden="true">
                   <Icon size={11} />
                 </div>
                 {text}
-              </li>
+              </motion.li>
             ))}
           </ul>
 
           {/* Stats strip */}
-          <div
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.75, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             style={{
               marginTop: 36,
               display: 'flex',
@@ -128,13 +154,18 @@ const Register = () => {
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>{label}</div>
               </div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* ── Right Form Panel ── */}
       <div className="auth-right">
-        <div className="auth-form-container" style={{ animation: 'fadeUp 0.4s ease' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="auth-form-container"
+        >
           <h1 className="auth-form-title">Create your account</h1>
           <p className="auth-form-subtitle">Start analyzing code with AI — free forever</p>
 
@@ -212,9 +243,11 @@ const Register = () => {
                   autoComplete="new-password"
                   style={{ paddingRight: '42px' }}
                 />
-                <button
+                <motion.button
                   type="button"
                   onClick={() => setShowPw((p) => !p)}
+                  whileHover={{ scale: 1.15 }}
+                  whileTap={{ scale: 0.85 }}
                   aria-label={showPw ? 'Hide password' : 'Show password'}
                   style={{
                     position: 'absolute',
@@ -232,7 +265,7 @@ const Register = () => {
                   }}
                 >
                   {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
+                </motion.button>
               </div>
 
               {/* Password strength indicator */}
@@ -250,10 +283,11 @@ const Register = () => {
                             : 'active-strong'
                             : ''
                         }`}
+                        style={{ transition: 'background-color 0.3s ease' }}
                       />
                     ))}
                   </div>
-                  <p className="pw-strength-label" style={{ color: strength.color }}>
+                  <p className="pw-strength-label" style={{ color: strength.color, transition: 'color 0.3s ease' }}>
                     {strength.label}
                   </p>
                 </>
@@ -278,12 +312,14 @@ const Register = () => {
               )}
             </div>
 
-            <button
+            <motion.button
               type="submit"
               className="btn btn-primary w-full btn-lg"
               disabled={loading || !form.name || !form.email || !form.password}
               style={{ marginTop: '4px', borderRadius: 'var(--radius-sm)', height: 44 }}
               aria-label={loading ? 'Creating account...' : 'Create Account'}
+              whileHover={{ scale: 1.012, y: -1 }}
+              whileTap={{ scale: 0.98 }}
             >
               {loading ? (
                 <>
@@ -291,7 +327,7 @@ const Register = () => {
                   Creating account...
                 </>
               ) : 'Create Account'}
-            </button>
+            </motion.button>
           </form>
 
           <p style={{
@@ -305,7 +341,7 @@ const Register = () => {
               Sign in
             </Link>
           </p>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

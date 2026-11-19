@@ -101,7 +101,7 @@ const Analytics = () => {
 
   const totalIssues = projects.reduce((s, p) => s + (p.currentAnalysis?.totalIssues || 0), 0);
   const avgScore = projects.length
-    ? Math.round(projects.reduce((s, p) => s + (p.currentAnalysis?.qualityScore || 100), 0) / projects.length)
+    ? Math.round(projects.reduce((s, p) => s + (p.currentAnalysis?.qualityScore ?? 100), 0) / projects.length)
     : 100;
 
   return (

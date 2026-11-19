@@ -17,6 +17,49 @@ const fileSchema = new mongoose.Schema({
   lastAnalyzed: { type: Date, default: null },
 });
 
+// Explicit schema for topology dependency connections
+// NOTE: 'type' MUST use { type: String } because 'type' is Mongoose's reserved schema key!
+const dependencyConnectionSchema = new mongoose.Schema(
+  {
+    source: { type: String, default: '' },
+    target: { type: String, default: '' },
+    type: { type: String, default: '' },
+    status: { type: String, default: '' },
+    detail: { type: String, default: '' },
+    issue: { type: String, default: null },
+  },
+  { _id: false }
+);
+
+const auditStageSchema = new mongoose.Schema(
+  {
+    id: { type: String, default: '' },
+    name: { type: String, default: '' },
+    status: { type: String, default: 'passed' },
+    issuesCount: { type: Number, default: 0 },
+    details: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
+const auditSummarySchema = new mongoose.Schema(
+  {
+    filesInspected: { type: Number, default: 0 },
+    componentsIdentified: { type: Number, default: 0 },
+    apisChecked: { type: Number, default: 0 },
+    checksExecuted: { type: Number, default: 0 },
+    testsExecuted: { type: Number, default: 0 },
+    testsPassed: { type: Number, default: 0 },
+    testsFailed: { type: Number, default: 0 },
+    dynamicTestsExecuted: { type: Number, default: null },
+    dynamicTestsStatus: { type: String, default: 'not_run' },
+    overallStatus: { type: String, default: 'passed' },
+    stages: [auditStageSchema],
+    dependencyMap: [dependencyConnectionSchema],
+  },
+  { _id: false }
+);
+
 const projectSchema = new mongoose.Schema(
   {
     name: {
@@ -70,6 +113,10 @@ const projectSchema = new mongoose.Schema(
       low: { type: Number, default: 0 },
       securityIssues: { type: Number, default: 0 },
       qualityScore: { type: Number, default: 100 },
+      auditSummary: {
+        type: auditSummarySchema,
+        default: () => ({}),
+      },
     },
     tags: [String],
   },

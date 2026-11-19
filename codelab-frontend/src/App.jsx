@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 // Pages
 import Login from './pages/Login';
@@ -31,7 +32,8 @@ const AdminRoute = ({ children }) => {
 const App = () => {
   return (
     <BrowserRouter>
-      <AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -82,7 +84,7 @@ const App = () => {
               }
             />
             <Route
-              path="/admin/users"
+              path="/admin/:tab"
               element={
                 <AdminRoute>
                   <AdminDashboard />
@@ -95,6 +97,7 @@ const App = () => {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 };

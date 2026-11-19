@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import {
   LayoutDashboard, FolderOpen, Code2, Terminal, ScanSearch,
   AlertCircle, Bot, BarChart2, User, LogOut, ShieldCheck,
@@ -21,8 +22,9 @@ const navItems = [
 ];
 
 const adminItems = [
-  { to: '/admin',       icon: ShieldCheck, label: 'Admin Dashboard' },
-  { to: '/admin/users', icon: Users,       label: 'User Activity' },
+  { to: '/admin',          icon: ShieldCheck, label: 'Admin Dashboard', end: true },
+  { to: '/admin/users',    icon: Users,       label: 'Users',          end: true },
+  { to: '/admin/activity', icon: Activity,    label: 'User Activity',  end: true },
 ];
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -46,22 +48,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     return saved === 'true';
   });
 
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('codelab-theme') || 'light';
-  });
-
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('codelab-theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  };
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '72px' : '252px');
@@ -130,7 +117,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             opacity: indicatorStyle.opacity,
             background: 'var(--primary-light)',
             borderRadius: 'var(--radius-sm)',
-            transition: 'all 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
+            transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
             pointerEvents: 'none',
             zIndex: 0,
           }}
@@ -174,6 +161,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 <NavLink
                   key={item.to}
                   to={item.to}
+                  end={item.end}
                   onClick={handleNavClick}
                   className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                   style={{ position: 'relative', zIndex: 1, background: 'transparent', justifyContent: isCollapsed ? 'center' : 'flex-start', padding: isCollapsed ? '10px 0' : '8px 10px' }}

@@ -24,8 +24,12 @@ const issueSchema = new mongoose.Schema(
     column: { type: Number, default: null },
     codeSnippet: { type: String, default: null },
 
-    // Static analysis source
-    source: { type: String, enum: ['static', 'ai', 'combined'], default: 'combined' },
+    // Analysis source and category
+    source: { type: String, default: 'Static Analysis' },
+    category: { type: String, default: 'Code Quality' },
+    component: { type: String, default: null },
+    reproductionSteps: { type: String, default: null },
+    evidence: { type: String, default: null },
     rule: { type: String, default: null }, // e.g. "no-unused-vars"
 
     // AI analysis fields

@@ -87,7 +87,7 @@ const formatMessage = (content) => {
     const html = part
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,0.08);padding:2px 5px;border-radius:3px;font-family:\'JetBrains Mono\',monospace;font-size:0.85em">$1</code>')
+      .replace(/`([^`]+)`/g, '<code style="background:var(--bg-hover);color:var(--primary);padding:2px 6px;border-radius:4px;font-family:\'JetBrains Mono\',monospace;font-size:0.85em">$1</code>')
       .replace(/\n/g, '<br/>');
     return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />;
   });
@@ -206,7 +206,7 @@ const AIAssistant = () => {
             onClick={() => sendMessage(qp.prompt)}
             disabled={loading}
             aria-label={`Quick prompt: ${qp.label}`}
-            style={{ fontSize: '0.78rem' }}
+            style={{ fontSize: '0.78rem', transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }}
           >
             {qp.label}
           </button>
@@ -240,7 +240,7 @@ const AIAssistant = () => {
                 gap: 10,
                 marginBottom: 16,
                 flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-                animation: 'fadeUp 0.2s ease',
+                animation: 'fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
               }}
             >
               {/* Avatar */}
@@ -251,6 +251,7 @@ const AIAssistant = () => {
                   : 'linear-gradient(135deg, var(--primary), var(--accent))',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: 'white', flexShrink: 0, fontSize: '0.7rem',
+                boxShadow: msg.role === 'user' ? '0 2px 8px rgba(99,102,241,0.25)' : '0 2px 8px rgba(139,92,246,0.25)',
               }} aria-hidden="true">
                 {msg.role === 'user' ? <User size={13} /> : <Bot size={13} />}
               </div>
@@ -258,7 +259,7 @@ const AIAssistant = () => {
               {/* Bubble */}
               <div
                 className={`chat-message ${msg.role}`}
-                style={{ maxWidth: '76%' }}
+                style={{ maxWidth: '76%', transition: 'all 0.2s ease' }}
               >
                 {formatMessage(msg.content)}
               </div>
@@ -267,12 +268,14 @@ const AIAssistant = () => {
 
           {/* Typing indicator */}
           {loading && (
-            <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16, animation: 'fadeUp 0.25s ease both' }}>
               <div style={{
                 width: 30, height: 30, borderRadius: '50%',
                 background: 'linear-gradient(135deg, var(--primary), var(--accent))',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: 'white', flexShrink: 0,
+                animation: 'pulse-ring 1.8s infinite',
+                boxShadow: '0 0 12px rgba(99,102,241,0.4)',
               }} aria-hidden="true">
                 <Bot size={13} />
               </div>

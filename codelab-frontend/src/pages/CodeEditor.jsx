@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { useProject } from '../contexts/ProjectContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import {
@@ -62,7 +63,7 @@ const FileTreeItem = ({ file, depth = 0, onSelect, selectedPath, onDelete, expan
       >
         {file.isDirectory ? (
           <>
-            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            <ChevronRight size={12} style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }} />
             <Folder size={13} style={{ color: '#F59E0B' }} />
           </>
         ) : (
@@ -128,6 +129,7 @@ const CodeEditor = () => {
   const projectId = searchParams.get('project');
   const { currentProject, currentFile, setCurrentFile, openProject, saveFile, createFile, deleteFile, uploadFiles } = useProject();
   const { user } = useAuth();
+  const { isDark } = useTheme();
 
   const [editorContent, setEditorContent] = useState('');
   const [saveStatus, setSaveStatus] = useState('saved');
@@ -470,7 +472,7 @@ const CodeEditor = () => {
             language={monacoLanguage}
             value={editorContent}
             onChange={handleEditorChange}
-            theme="vs"
+            theme={isDark ? "vs-dark" : "vs"}
             options={{
               fontSize: 13,
               fontFamily: "'JetBrains Mono', 'Fira Code', monospace",

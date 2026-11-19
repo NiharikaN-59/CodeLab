@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import {
@@ -52,11 +53,28 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+const TABS = ['overview', 'users', 'activity', 'token-usage'];
+
+const normalizeTab = (t) => {
+  if (!t || t === 'overview') return 'overview';
+  if (t === 'users' || t === 'user-management') return 'users';
+  if (t === 'activity' || t === 'user-activity') return 'activity';
+  if (t === 'token-usage' || t === 'tokens') return 'token-usage';
+  return 'overview';
+};
+
 const AdminDashboard = () => {
+  const { tab } = useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [tokenUsage, setTokenUsage] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+
+  const activeTab = normalizeTab(tab);
+
+  const handleTabChange = (newTab) => {
+    navigate(newTab === 'overview' ? '/admin' : `/admin/${newTab}`);
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -118,8 +136,6 @@ const AdminDashboard = () => {
     color: ACTIVITY_COLORS[i % ACTIVITY_COLORS.length],
   }));
 
-  const TABS = ['overview', 'users', 'activity', 'token-usage'];
-
   return (
     <div className="page-content">
       {/* Header */}
@@ -141,18 +157,21 @@ const AdminDashboard = () => {
 
       {/* Tabs */}
       <div className="tabs stagger-1" style={{ marginBottom: 24 }} role="tablist">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            role="tab"
-            aria-selected={activeTab === tab}
-            className={`tab-item ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-            style={{ textTransform: 'capitalize', border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            {tab}
-          </button>
-        ))}
+        {TABS.map((t) => {
+          const tabLabel = t === 'token-usage' ? 'Token Usage' : t.charAt(0).toUpperCase() + t.slice(1);
+          return (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={activeTab === t}
+              className={`tab-item ${activeTab === t ? 'active' : ''}`}
+              onClick={() => handleTabChange(t)}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              {tabLabel}
+            </button>
+          );
+        })}
       </div>
 
       {/* Overview Tab */}
@@ -274,9 +293,9 @@ const AdminDashboard = () => {
       {activeTab === 'users' && (
         <ScrollReveal delay={100} className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-            <h3 style={{ fontWeight: 600, fontSize: '1rem' }}>All Users</h3>
+            <h3 style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--text-primary)' }}>User Management</h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
-              {users?.length || 0} total users
+              {users?.length || 0} registered users and account status
             </p>
           </div>
           <div style={{ overflowX: 'auto' }}>
@@ -318,7 +337,7 @@ const AdminDashboard = () => {
                           {u.name?.charAt(0)?.toUpperCase()}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: '0.8375rem' }}>{u.name}</div>
+                          <div style={{ fontWeight: 600, fontSize: '0.8375rem', color: 'var(--text-primary)' }}>{u.name}</div>
                           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{u.email}</div>
                         </div>
                       </div>
@@ -361,35 +380,42 @@ const AdminDashboard = () => {
       {activeTab === 'activity' && (
         <ScrollReveal delay={100} className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-            <h3 style={{ fontWeight: 600, fontSize: '1rem' }}>Full Activity Log</h3>
+            <h3 style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--text-primary)' }}>User Activity Log</h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
-              {recentActivity?.length} recent events
+              {recentActivity?.length || 0} recent platform events across all users
             </p>
           </div>
           <div style={{ padding: '0 20px' }}>
-            <div className="divide-y">
-              {recentActivity?.map((a) => (
-                <div key={a._id} style={{ padding: '11px 0', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                  <div style={{
-                    width: 7, height: 7, borderRadius: '50%',
-                    background: 'var(--primary)',
-                    marginTop: 5, flexShrink: 0,
-                  }} aria-hidden="true" />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.8rem', lineHeight: 1.5 }}>
-                      <strong>{a.userName}</strong>{' '}
-                      <span style={{ color: 'var(--text-secondary)' }}>
-                        {ACTIVITY_TYPE_LABELS[a.type] || a.type}
-                        {a.projectName && ` — ${a.projectName}`}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 1 }}>
-                      {format(new Date(a.createdAt), 'MMM d, yyyy HH:mm:ss')}
+            {(!recentActivity || recentActivity.length === 0) ? (
+              <div className="empty-state" style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No recent activity recorded yet.
+              </div>
+            ) : (
+              <div className="divide-y">
+                {recentActivity.map((a) => (
+                  <div key={a._id} style={{ padding: '11px 0', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{
+                      width: 7, height: 7, borderRadius: '50%',
+                      background: 'var(--primary)',
+                      marginTop: 5, flexShrink: 0,
+                      boxShadow: '0 0 6px rgba(99, 102, 241, 0.4)',
+                    }} aria-hidden="true" />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.8rem', lineHeight: 1.5 }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>{a.userName}</strong>{' '}
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                          {ACTIVITY_TYPE_LABELS[a.type] || a.type}
+                          {a.projectName && ` — ${a.projectName}`}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 1 }}>
+                        {format(new Date(a.createdAt), 'MMM d, yyyy HH:mm:ss')}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </ScrollReveal>
       )}

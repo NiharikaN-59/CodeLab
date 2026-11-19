@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useProject } from '../contexts/ProjectContext';
+import { useTheme } from '../contexts/ThemeContext';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import {
@@ -84,6 +85,7 @@ int main() {
 const CompilerPage = () => {
   const [searchParams] = useSearchParams();
   const { currentProject, currentFile, saveFile } = useProject();
+  const { isDark } = useTheme();
   const [language, setLanguage] = useState('javascript');
   const [code, setCode] = useState('');
   const [stdin, setStdin] = useState('');
@@ -238,7 +240,7 @@ const CompilerPage = () => {
         </select>
         <div style={{ flex: 1 }} />
         {result && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', animation: 'fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
             {result.success ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--success)' }}>
                 <CheckCircle size={14} /> {result.status}
@@ -287,7 +289,7 @@ const CompilerPage = () => {
               language={language === 'c' ? 'c' : language === 'cpp' ? 'cpp' : language}
               value={code}
               onChange={(v) => setCode(v || '')}
-              theme="vs"
+              theme={isDark ? "vs-dark" : "vs"}
               options={{
                 fontSize: 13,
                 fontFamily: "'JetBrains Mono', monospace",

@@ -104,7 +104,7 @@ router.put('/:id', async (req, res) => {
     const project = await Project.findOneAndUpdate(
       { _id: req.params.id, owner: req.user._id },
       { name, description, lastSaved: new Date() },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
     res.json({ success: true, project });
@@ -119,7 +119,7 @@ router.delete('/:id', async (req, res) => {
     const project = await Project.findOneAndUpdate(
       { _id: req.params.id, owner: req.user._id },
       { status: 'deleted' },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
 
